@@ -1,6 +1,12 @@
-FROM python:3.10
-RUN pip install fastapi uvicorn scikit-learn joblib numpy pandas seaborn matplotlib
-COPY app.py /app/app.py
-COPY model.pkl /app/model.pkl
+FROM python:3.10-slim
+
 WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
