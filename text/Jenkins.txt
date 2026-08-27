@@ -1,0 +1,71 @@
+## Jenkins 설치 명령어 (Ubuntu)
+
+$ docker run -d \
+    --name jenkins \
+    --restart=always \
+    --user root \
+    -p 8080:8080 \
+    -p 50000:50000 \
+    -v jenkins_home:/var/jenkins_home \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    jenkins/jenkins:lts-jdk17
+
+## root 확인
+$ docker exec jenkins whoami
+
+## 젠킨스 컨테이너 실행
+$ docker exec -it -u root jenkins bash
+
+## 실행 확인
+$ docker ps
+
+→ Jenkins 컨테이너와 ai-model-api 컨테이너가 보이면 정상
+
+## Jenkins 브라우저 확인
+> http://localhost:8080
+
+## 초기 비밀번호 확인
+$ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+
+> install suggested plugins 선택 → 관리자 계정 생성
+
+## 도커 종료? 삭제?
+$ docker rm -f 도커이름
+
+## 젠킨스 컨테이너 안에서
+# apt update
+# apt install docker.io git curl -y    # 도커, git 플러그인 설치
+# docker ps
+# exit
+
+## 젠킨스 재시작 명령어
+$ docker start jenkins
+
+---
+
+>> GitHub → Jenkins → Docker Build → 실행 자동 실습
+
+GitHub에 Commit & Push
+→ Jenkins가 Git Clone
+→ Docker Image Build + Push Image in Docker Hub
+→ 기존 컨테이너 삭제
+→ 새 컨테이너 실행
+→ API 결과 확인
+
+1. Docker Hub Credential 생성
+
+> Docker Hub Site Login
+→ 우측 상단 - 계정
+→ Account Settings
+→ Personal access tokens
+→ New acess token
+→ At the password prompt, enter the personal access token. 내용 copy
+
+※ 보안 주의
+`docker hub token : dckr_pat_fBLe7NUz-ugTkKwVvAMdx3HeFV4`
+
+2. Jenkins Docker Hub Credential 등록
+
+3. GitHub Credential 등록
+
+`GitHub Personal Access Tokens (Classic) : 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`
