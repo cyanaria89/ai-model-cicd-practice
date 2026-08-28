@@ -1,0 +1,230 @@
+# MLOps
+
+---
+
+## 1. Ubuntu 설치
+
+- powershell
+> wsl --install    # 우분투 설치 (id / pass 설정)
+> wsl -l -v        # 확인 (러닝, 버전)
+
+---
+
+## 1-ex. Ubuntu 삭제
+
+> wsl --unregister Ubuntu   # 우분투만 삭제
+> wsl --shutdown              # wsl 우분투
+> wsl                             # 우분투 재시작
+
+---
+
+## 2. 파이썬 설치
+
+우분투에서
+> sudo apt update
+> sudo apt install python3 python3-pip -y
+> python3 --version
+
+---
+
+## 3. Docker Desktop 다운
+
+> https://www.docker.com/products/docker-desktop/?utm_source=chatgpt.com
+
+### 설정
+> Docker Desktop -> Settings -> Resources -> WSL Integration
+
+-> Enable integration with my default WSL distro
+-> Ubuntu 체크
+
+### 파워쉘에서 확인
+> docker --version
+> docker run hello-world
+> docker ps
+
+---
+
+## 4. 실습 환경 구성
+
+> 작업 경로 : ~/home/내계정/practice
+
+> 작업 경로 만들기
+- $cd /home/admini
+- $mkdir -p ~/practice
+- $cd ~/practice
+- $sudo apt update
+
+- $python3 -m venv venv              # 가상환경 만들기
+- $source venv/bin/activate            # 가상환경 활성화
+
+- $sudo apt install python3.14-venv  # 가상환경 설치?
+
+> 분석 라이브러리 설치
+- $pip install fastapi uvicorn scikit-learn joblib numpy pandas seaborn matplotlib
+
+---
+
+## 5. AI 모델 생성
+
+1. 간단한 머신러닝 모델을 학습하고 결과(model.pkl)를 저장하는 과정
+
+- $vim make_model.py    # 코드 작성
+
+-> :set paste > i > ctrl + v > esc > :wq! > enter
+
+2. make_model.py (학습 모델 생성)
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+import numpy as np
+import joblib
+
+X = np.random.rand(200, 3)
+y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+model = RandomForestClassifier()
+model.fit(X, y)
+
+joblib.dump(model, "model.pkl")
+print("model.pkl 생성 완료!")
+```
+
+3. 코드 확인
+
+- $cat make_model.py      # 코드 내용 확인 가능
+
+4. 실행
+- $python make_model.py
+
+---
+
+Fast API 모델 서버 개발 실습
+: 모델을 API로 감싸서 실제 서비스 형태로 만들기
+
+- $vim app.py
+
+```python
+from fastapi import FastAPI
+import joblib
+
+app = FastAPI()
+model = joblib.load("model.pkl")
+
+@app.get("/predict")
+def predict(f1: float, f2L float, f2: float):
+    pred = model.predict([(f1, f2, f3)])
+    return {"prediction": int(pred[0])}
+```
+
+app.py 실행
+- $uvicorn app:app --host 0.0.0.0 --port 8000
+
+브라우저 테스트
+http://localhost:8000/predict?f1=0.1&f2=-1&f3=2.5
+
+---
+
+## 6. Dockerfile로 AI 모델 서버 패키징
+: 모델 + 서버 + 라이브러리를 이미지로 묶어 어디서든 실행 가능하게 만듦
+
+- $vim Dockerfile
+
+```Dockerfile
+FROM python:3.10
+RUN pip install fastapi uvicorn scikit-learn joblib numpy pandas seaborn matplotlib
+COPY app.py /app/app.py
+COPY model.pkl /app/model.pkl
+WORKDIR /app
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+이미지 빌드
+- $sudo docker build -t ai/model:v1 .
+
+이미지 실행
+- $sudo docker run -d -p 8000:8000 ai/model:v1
+
+실행 확인
+- $sudo docker ps
+
+실행 종료
+- $sudo docker stop (container id)
+
+---
+
+## 7. Docker 스케일링 실습 (K8s Deployment 유사 실습)
+: 자동 복구 개념
+
+> 서버 3개 띄우기
+- $sudo docker run -d -p 8001:8000 ai/model:v1
+- $sudo docker run -d -p 8002:8000 ai/model:v1
+- $sudo docker run -d -p 8003:8000 ai/model:v1
+- $sudo docker ps
+
+동일 서버를 여러개 띄워서 하나가 종료되어도 다음으로 넘어가서 서비스가 유지되도록?
+
+---
+
+## 8. 무중단 모델 업데이트 (Rolling Update)
+
+: 기존 버전의 애플리케이션 인스턴스(피드)를 새로운 버전의 인스턴스로 점진적으로 교체하여 서비스 중단 없이 업데이트를 수행하는 배포 방식
+서버의 과부하를 방지하면서 안정적인 업데이트를 보장하며, 쿠버네티스와 같은 컨테이너 오케스트레이션 도구에서 널리 사용
+
+> 모델 교체 : v1 -> v2
+
+> New Model !!
+
+- $vim make_model_v2.py
+
+```python
+from sklearn.linear_model import LogisticRegression
+import numpy as np
+import joblib
+
+X = np.random.rand(200, 3)
+y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+model = LogisticRegression()
+mode.fit(X, y)
+
+joblib.dump(model, "model.pkl")
+print("v2 모델 생성 완료!")
+```
+
+- $sudo docker build -t ai/model:v2
+
+> 컨테이너 교체
+
+- $sudo docker stop (container-id)
+- $sudo docker run -d -p 8003:8000 ai/model:v2
+
+> docker 전체 종료? (권한 없을 때)
+- $sudo docker stop $(sudo docker ps -aq)
+
+---
+
+## 9. Docker Compose로 단일 명령 배포 실습
+
+: 쿠버네티스의 Deployment + Service를 Docker Compose 1개 파일로 설명 및 실행
+
+> docker-compose.yml 생성
+
+```yaml
+version: '3'
+services:
+  model1:
+    image: ai/model:v1
+    ports:
+      - "8001:8000"
+  model2:
+    image: ai/model:v1
+    ports:
+      - "8002:8000"
+  model3:
+    image: ai/model:v2
+    ports:
+      - "8003:8000"
+```
+
+- $sudo docker compose up -d
+- $sudo docker compose down
