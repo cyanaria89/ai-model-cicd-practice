@@ -115,5 +115,18 @@ $ git reset --hard origin/main
 
 
 # ========================================
-# 
+# 젠킨스 포트 포워드 바인딩
+# - 실제 현업에서는 우회 방식 사용은 지양하는 편
 # ========================================
+
+# ngrok 설치
+: https://ngrok.com/download/windows?utm_source=chatgpt.com
+
+# ngrok 계정 연결
+: https://dashboard.ngrok.com/get-started/setup/windows
+  --> Your Authtoken 클릭 > copy
+
+# ngrok 실행--> ngrok config add-authtoken 본인의_토큰
+# forwarding 주소 확인--> https://blubber-amusement-upcoming.ngrok-free.dev/
+# git webhooks에 --> https://blubber-amusement-upcoming.ngrok-free.dev/github-webhook/ 등록
+
